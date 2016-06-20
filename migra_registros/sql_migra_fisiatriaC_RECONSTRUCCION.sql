@@ -1,4 +1,31 @@
-/* Formatted on 20/06/2016 11:18:01 (QP5 v5.252.13127.32867) */
+/* Formatted on 20/06/2016 11:56:30 (QP5 v5.252.13127.32867) */
+DECLARE
+   CURSOR CURS
+   IS
+      SELECT 'ALTER TABLE ADMINISTRATIVO.MED_TURNO_PROCEDIMIENTO ADD (pro_id_n1 INTEGER)'
+                TEXT
+        FROM DUAL;
+
+   C_ROW         CURS%ROWTYPE;
+   CURSOR_NAME   INTEGER;
+BEGIN
+   FOR C_ROW IN CURS
+   LOOP
+      DECLARE
+         v_error   PLS_INTEGER;
+      BEGIN
+         CURSOR_NAME := DBMS_SQL.OPEN_CURSOR;
+         DBMS_SQL.PARSE (CURSOR_NAME, C_ROW.TEXT, DBMS_SQL.NATIVE);
+         DBMS_SQL.CLOSE_CURSOR (CURSOR_NAME);
+      EXCEPTION
+         WHEN OTHERS
+         THEN
+            v_error := -1;
+      END;
+   END LOOP;
+END;
+/
+
 SET TERMOUT ON
 WHENEVER SQLERROR EXIT FAILURE ROLLBACK;
 
@@ -186,61 +213,104 @@ END;
 
 
 
-DECLARE
-   CURSOR CURS
-   IS
-      SELECT 'ALTER TABLE ADMINISTRATIVO.MED_TURNO_PROCEDIMIENTO ADD (pro_id_n1 INTEGER)'
-                TEXT
-        FROM DUAL;
+SELECT MEF_CAB_TRATAM.CTR_ID,
+       MEF_CAB_TRATAM.CTR_ORDEN_SESION,
+       MEF_CAB_TRATAM.PTR_ID,
+       MEF_CAB_TRATAM.CTR_FECHA,
+       MEF_CAB_TRATAM.CTR_ESTADO,
+       MEF_CAB_TRATAM.CTR_OBSERVACION,
+       MEF_CAB_TRATAM.PME_ID,
+       MEF_CAB_TRATAM.UNS_ID
+  FROM ADMINISTRATIVO.MEF_CAB_TRATAM
+ WHERE MEF_CAB_TRATAM.PTR_ID = '&&V_PTR_ID';
 
-   C_ROW         CURS%ROWTYPE;
-   CURSOR_NAME   INTEGER;
-BEGIN
-   FOR C_ROW IN CURS
-   LOOP
-      DECLARE
-         v_error   PLS_INTEGER;
-      BEGIN
-         CURSOR_NAME := DBMS_SQL.OPEN_CURSOR;
-         DBMS_SQL.PARSE (CURSOR_NAME, C_ROW.TEXT, DBMS_SQL.NATIVE);
-         DBMS_SQL.CLOSE_CURSOR (CURSOR_NAME);
-      EXCEPTION
-         WHEN OTHERS
-         THEN
-            v_error := -1;
-      END;
-   END LOOP;
-END;
-/
-
+       PAUSE pruebe
 
 
 DECLARE
-   CURSOR c1
-   IS
-      SELECT SPR_ID, SPR_SESIONES
-        FROM MED_SOLICITUD_PROCEDIMIENTO
-       WHERE SPR_ID = '&&1';
-
    --   CURSOR c1
    --   IS
-   --        SELECT DISTINCT (SELECT PROID1NIVEL
-   --                           FROM AA_TABLA_EQUIV_PROCED
-   --                          WHERE tte_id = MEF_DET_TRATAM.TTE_ID)
-   --                           PROID1NIVEL
-   --          FROM ADMINISTRATIVO.MEF_PLANIF_TRATAM
-   --               INNER JOIN ADMINISTRATIVO.MEF_CAB_TRATAM
-   --                  ON (MEF_PLANIF_TRATAM.PTR_ID = MEF_CAB_TRATAM.PTR_ID)
-   --               INNER JOIN ADMINISTRATIVO.MEF_DET_TRATAM
-   --                  ON (MEF_CAB_TRATAM.CTR_ID = MEF_DET_TRATAM.CTR_ID)
-   --         WHERE MEF_PLANIF_TRATAM.PTR_ID = '&&1'
-   --      ORDER BY 1;
+   --      SELECT SPR_ID
+   --        FROM MED_SOLICITUD_PROCEDIMIENTO
+   --       WHERE SPR_ID = '&&1';
 
-   v_nivel1_clasif   PLS_INTEGER;
+   CURSOR c1
+   IS
+        SELECT DISTINCT (SELECT PROID1NIVEL
+                           FROM AA_TABLA_EQUIV_PROCED
+                          WHERE tte_id = MEF_DET_TRATAM.TTE_ID)
+                           PROID1NIVEL
+          FROM ADMINISTRATIVO.MEF_PLANIF_TRATAM
+               INNER JOIN ADMINISTRATIVO.MEF_CAB_TRATAM
+                  ON (MEF_PLANIF_TRATAM.PTR_ID = MEF_CAB_TRATAM.PTR_ID)
+               INNER JOIN ADMINISTRATIVO.MEF_DET_TRATAM
+                  ON (MEF_CAB_TRATAM.CTR_ID = MEF_DET_TRATAM.CTR_ID)
+         WHERE MEF_PLANIF_TRATAM.PTR_ID = '&&1'
+      ORDER BY 1;
+
+   v_nivel1_clasif    PLS_INTEGER;
+
+   TYPE MEF_CAB_TRATAM_tipo IS TABLE OF administrativo.MEF_CAB_TRATAM%ROWTYPE;
+
+   v_MEF_CAB_TRATAM   MEF_CAB_TRATAM_tipo := MEF_CAB_TRATAM_tipo ();
 BEGIN
+     SELECT MEF_CAB_TRATAM.CTR_ID,
+            MEF_CAB_TRATAM.CTR_ORDEN_SESION,
+            MEF_CAB_TRATAM.PTR_ID,
+            MEF_CAB_TRATAM.CTR_FECHA,
+            MEF_CAB_TRATAM.CTR_ESTADO,
+            MEF_CAB_TRATAM.CTR_OBSERVACION,
+            MEF_CAB_TRATAM.PME_ID,
+            MEF_CAB_TRATAM.UNS_ID
+       BULK COLLECT INTO v_MEF_CAB_TRATAM
+       FROM ADMINISTRATIVO.MEF_CAB_TRATAM
+      WHERE MEF_CAB_TRATAM.PTR_ID = '&&V_PTR_ID'
+   ORDER BY CTR_ORDEN_SESION;
+
+
+
    FOR c1_rec IN C1
    LOOP
-      ROLLBACK;
+      IF v_MEF_CAB_TRATAM.COUNT > 0
+      THEN
+         FOR i IN 1 .. v_MEF_CAB_TRATAM.COUNT
+         LOOP
+            INSERT
+              INTO ADMINISTRATIVO.MED_TURNO_PROCEDIMIENTO (
+                      MED_TURNO_PROCEDIMIENTO.TPR_ID,
+                      MED_TURNO_PROCEDIMIENTO.SPR_ID,
+                      MED_TURNO_PROCEDIMIENTO.USU_ID,
+                      MED_TURNO_PROCEDIMIENTO.PSC_ID,
+                      MED_TURNO_PROCEDIMIENTO.TPR_NUM_SESION,
+                      MED_TURNO_PROCEDIMIENTO.TPR_FECHA_CREACION,
+                      MED_TURNO_PROCEDIMIENTO.TPR_FECHA_TURNO,
+                      MED_TURNO_PROCEDIMIENTO.TPR_ESTADO,
+                      MED_TURNO_PROCEDIMIENTO.TPR_FECHA_INACTIVACION,
+                      MED_TURNO_PROCEDIMIENTO.TPR_REPLANIFICADO,
+                      MED_TURNO_PROCEDIMIENTO.PRO_ID_N1)
+            VALUES (-1,
+                    /*:MED_TURNO_PROCEDIMIENTO.SPR_ID*/
+                    :v_seq_solicitud,
+                    /*:MED_TURNO_PROCEDIMIENTO.USU_ID*/
+                    NULL,
+                    /*:MED_TURNO_PROCEDIMIENTO.PSC_ID*/
+                    NULL,
+                    /*:MED_TURNO_PROCEDIMIENTO.TPR_NUM_SESION*/
+                    v_MEF_CAB_TRATAM (i).CTR_ORDEN_SESION,
+                    /*:MED_TURNO_PROCEDIMIENTO.TPR_FECHA_CREACION*/
+                    SYSDATE,
+                    /*:MED_TURNO_PROCEDIMIENTO.TPR_FECHA_TURNO*/
+                    v_MEF_CAB_TRATAM (i).CTR_FECHA,
+                    /*:MED_TURNO_PROCEDIMIENTO.TPR_ESTADO*/
+                    v_MEF_CAB_TRATAM (i).CTR_ESTADO,
+                    /*:MED_TURNO_PROCEDIMIENTO.TPR_FECHA_INACTIVACION*/
+                    NULL,
+                    /*:MED_TURNO_PROCEDIMIENTO.TPR_REPLANIFICADO*/
+                    NULL,
+                    /*:MED_TURNO_PROCEDIMIENTO.PRO_ID_N1*/
+                    c1_rec.PROID1NIVEL);
+         END LOOP;
+      END IF;
    END LOOP;
 END;
 
