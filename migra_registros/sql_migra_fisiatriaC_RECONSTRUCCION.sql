@@ -1,4 +1,4 @@
-/* Formatted on 20/06/2016 10:52:38 (QP5 v5.252.13127.32867) */
+/* Formatted on 20/06/2016 11:18:01 (QP5 v5.252.13127.32867) */
 SET TERMOUT ON
 WHENEVER SQLERROR EXIT FAILURE ROLLBACK;
 
@@ -175,30 +175,76 @@ VALUES (-1,
         /*:MED_SOLICITUD_PROCEDIMIENTO.SPR_FECHA_AGENDADO*/
         '&&V_PTR_FECHA_INICIO.');
 
-ROLLBACK;
+VARIABLE v_seq_solicitud NUMBER
+
+DECLARE
+BEGIN
+   SELECT SEQ_MED_SOLICITUD_PROC.CURRVAL INTO :v_seq_solicitud FROM DUAL;
+
+   DBMS_OUTPUT.PUT_LINE (':v_seq_solicitud = ' || :v_seq_solicitud);
+END;
+
+
+
+DECLARE
+   CURSOR CURS
+   IS
+      SELECT 'ALTER TABLE ADMINISTRATIVO.MED_TURNO_PROCEDIMIENTO ADD (pro_id_n1 INTEGER)'
+                TEXT
+        FROM DUAL;
+
+   C_ROW         CURS%ROWTYPE;
+   CURSOR_NAME   INTEGER;
+BEGIN
+   FOR C_ROW IN CURS
+   LOOP
+      DECLARE
+         v_error   PLS_INTEGER;
+      BEGIN
+         CURSOR_NAME := DBMS_SQL.OPEN_CURSOR;
+         DBMS_SQL.PARSE (CURSOR_NAME, C_ROW.TEXT, DBMS_SQL.NATIVE);
+         DBMS_SQL.CLOSE_CURSOR (CURSOR_NAME);
+      EXCEPTION
+         WHEN OTHERS
+         THEN
+            v_error := -1;
+      END;
+   END LOOP;
+END;
+/
+
+
+
+DECLARE
+   CURSOR c1
+   IS
+      SELECT SPR_ID, SPR_SESIONES
+        FROM MED_SOLICITUD_PROCEDIMIENTO
+       WHERE SPR_ID = '&&1';
+
+   --   CURSOR c1
+   --   IS
+   --        SELECT DISTINCT (SELECT PROID1NIVEL
+   --                           FROM AA_TABLA_EQUIV_PROCED
+   --                          WHERE tte_id = MEF_DET_TRATAM.TTE_ID)
+   --                           PROID1NIVEL
+   --          FROM ADMINISTRATIVO.MEF_PLANIF_TRATAM
+   --               INNER JOIN ADMINISTRATIVO.MEF_CAB_TRATAM
+   --                  ON (MEF_PLANIF_TRATAM.PTR_ID = MEF_CAB_TRATAM.PTR_ID)
+   --               INNER JOIN ADMINISTRATIVO.MEF_DET_TRATAM
+   --                  ON (MEF_CAB_TRATAM.CTR_ID = MEF_DET_TRATAM.CTR_ID)
+   --         WHERE MEF_PLANIF_TRATAM.PTR_ID = '&&1'
+   --      ORDER BY 1;
+
+   v_nivel1_clasif   PLS_INTEGER;
+BEGIN
+   FOR c1_rec IN C1
+   LOOP
+      ROLLBACK;
+   END LOOP;
+END;
+
+
 
 SPOOL OFF;
-
-
-COLUMN GRAB HEADING "GRAB" FORMAT A10  TRUNC  NEW_VALUE V_GRAB
-
-SELECT :v_variable GRAB FROM DUAL;
-
-
-
-COLUMN fecha FORMAT a20 NEW_VALUE fec NOPRINT
-
-SELECT TO_CHAR (SYSDATE, 'yyyy-mm-dd-hh24-mi-ss') fecha FROM DUAL;
-
---
---
---SPOOL  C:\logs\FALLAS\&&V_GRAB._&&1._&&fec..txt
---
---SELECT '&&1' SPR_ID FROM DUAL;
---
---
---SPOOL OFF;
---
---
---
---SET TERMOUT OFF
+ROLLBACK;
